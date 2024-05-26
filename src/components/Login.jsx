@@ -11,8 +11,10 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import google from '../assets/google.png';
 import fb from '../assets/fb.png';
 import apple from '../assets/apple.png';
+import {useNavigation} from '@react-navigation/native';
 
 export default function Login() {
+  const navigation = useNavigation();
   return (
     <View className="flex flex-1 bg-white p-5 ">
       <Text className="text-gray-600">Farmer Eats</Text>
@@ -21,7 +23,7 @@ export default function Login() {
           <Text className="text-4xl text-black">Welcome Back!</Text>
           <View className="flex flex-row">
             <Text className="">New here?</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={()=>navigation.navigate("SignUp")}>
               <Text className="text-orange-700">Create account</Text>
             </TouchableOpacity>
           </View>
@@ -42,13 +44,14 @@ export default function Login() {
               </View>
             </View>
             <View className="flex flex-row items-center ">
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('login-forgot password')}>
                 <Text className="text-red-500">Forgot?</Text>
               </TouchableOpacity>
             </View>
           </View>
           <View className="my-5">
-            <TouchableOpacity className="bg-green-700 py-4 rounded-full">
+            <TouchableOpacity className="bg-orange-700 py-4 rounded-full">
               <Text className="text-center text-white text-xl font-bold">
                 Login
               </Text>
