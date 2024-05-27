@@ -14,6 +14,7 @@ import fb from '../assets/fb.png';
 import apple from '../assets/apple.png';
 import {useNavigation} from '@react-navigation/native';
 import SelectDropdown from 'react-native-select-dropdown';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
 const {width} = Dimensions.get('window');
 
@@ -42,6 +43,19 @@ export default function SignUp() {
     }
   };
 
+  const [imageUri, setImageUri] = useState(null);
+
+  const handleImagePicker = () => {
+    launchImageLibrary({mediaType: 'photo'}, response => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorMessage) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+      } else {
+        setImageUri(response.assets[0].uri);
+      }
+    });
+  };
   return (
     <View className="flex flex-1 bg-white">
       <ScrollView
@@ -174,7 +188,7 @@ export default function SignUp() {
                         backgroundColor: 'gray',
                         paddingVertical: 10,
                         paddingHorizontal: 12,
-                        width:100
+                        width: 100,
                       }}
                       data={[{state: 'Kolkata'}, {state: 'Panjab'}]}
                       onSelect={(selectedItem, index) => {
@@ -183,21 +197,25 @@ export default function SignUp() {
                       renderButton={(selectedItem, isOpened) => (
                         <View className=" w-full">
                           <Text className="text-black w-full">
-                            {selectedItem
-                              ? selectedItem.state
-                              : 'State'}
+                            {selectedItem ? selectedItem.state : 'State'}
                           </Text>
                         </View>
                       )}
                       renderItem={(item, index, isSelected) => (
-                        <View className="" >
-                          <Text className="text-black w-full">{item.state}</Text>
+                        <View className="">
+                          <Text className="text-black w-full">
+                            {item.state}
+                          </Text>
                         </View>
                       )}
                       showsVerticalScrollIndicator={true}
                     />
                   </View>
-                  <TextInput placeholder=" enter Zipcode " className="bg-gray-200 rounded-lg " keyboardType='numeric' />
+                  <TextInput
+                    placeholder=" enter Zipcode "
+                    className="bg-gray-200 rounded-lg "
+                    keyboardType="numeric"
+                  />
                 </View>
 
                 <View className="my-5 flex flex-row justify-between">
@@ -223,16 +241,32 @@ export default function SignUp() {
             <View>
               <View className="mt-16">
                 <Text className="text-4xl text-black">Verification</Text>
-                <Text>Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia mollitia incidunt, blanditiis soluta praesentium iste dolor doloremque nulla ipsam reiciendis!</Text>
+                <Text>
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                  Officia mollitia incidunt, blanditiis soluta praesentium iste
+                  dolor doloremque nulla ipsam reiciendis!
+                </Text>
               </View>
               <View className="mt-12">
-                <View className="flex flex-row gap-x-2 bg-red-100 rounded-xl px-3 my-2">
-                  <View className="flex flex-row items-center">
-                    <Icon name="user" size={18} color="black" />
-                  </View>
-                  <TextInput placeholder="Full name" className="w-full" />
+                <View>
+                  <Text >
+                    Attach proof of Department of Agriculture registrations i.e.
+                    Florida Fresh, USDA Approved, USDA Organic
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleImagePicker}>
+                    <Image
+                      source={require('./path-to-camera-icon.png')}
+                    />
+                  </TouchableOpacity>
+                  {imageUri && (
+                    <Image
+                      source={{uri: imageUri}}
+                    />
+                  )}
+                 
                 </View>
-               
+
                 <View className="my-5 flex flex-row justify-between bottom-0 ">
                   <TouchableOpacity
                     onPress={handleBack}
