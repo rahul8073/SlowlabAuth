@@ -1,4 +1,4 @@
-import React, {useRef, useState} from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,66 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import google from '../assets/google.png';
 import fb from '../assets/fb.png';
 import apple from '../assets/apple.png';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import SelectDropdown from 'react-native-select-dropdown';
-import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 import cameraicon from '../assets/cameraIcon.png';
-const {width} = Dimensions.get('window');
+import axios from 'axios';
+const { width } = Dimensions.get('window');
+
+const initialBusinessHours = {
+  mon: [],
+  tue: [],
+  wed: [],
+  thu: [],
+  fri: [],
+  sat: [],
+  sun: [],
+};
+
+const dayMapping = {
+  M: 'mon',
+  T: 'tue',
+  W: 'wed',
+  Th: 'thu',
+  F: 'fri',
+  S: 'sat',
+  Su: 'sun',
+};
 
 export default function SignUp() {
   const navigation = useNavigation();
   const scrollViewRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedDay, setSelectedDay] = useState('mon');
+  const [selectedTimes, setSelectedTimes] = useState([]);
+  const [businessHours, setBusinessHours] = useState(initialBusinessHours);
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    role: 'farmer',
+    business_name: '',
+    informal_name: '',
+    address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    registration_proof: null,
+    business_hours: {},
+    device_token: '0imfnc8mVLWwsAawjYr4Rx-Af50DDqtlx',
+    type: 'email',
+    social_id: '0imfnc8mVLWwsAawjYr4Rx-Af50DDqtlx',
+  });
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      business_hours: businessHours,
+    }));
+  }, [businessHours]);
 
   const handleNext = () => {
     if (currentIndex < 5) {
@@ -43,8 +93,7 @@ export default function SignUp() {
     }
   };
 
-  const [imageUri, setImageUri] = useState(null);
-
+  const days = ['M', 'T', 'W', 'Th', 'F', 'S', 'Su'];
   const scheduling = [
     '8:00am - 10:00am',
     '10:00am - 01:00pm',
@@ -53,20 +102,66 @@ export default function SignUp() {
     '7:00pm - 10:00pm',
   ];
 
+  const handleDaySelect = (day) => {
+    const mappedDay = dayMapping[day];
+    setSelectedDay(mappedDay);
+    setSelectedTimes(businessHours[mappedDay]);
+  };
+
+  const handleTimeSelect = (time) => {
+    setSelectedTimes((prev) => {
+      const updatedTimes = prev.includes(time)
+        ? prev.filter((t) => t !== time)
+        : [...prev, time];
+      
+      setBusinessHours((prevHours) => ({
+        ...prevHours,
+        [selectedDay]: updatedTimes,
+      }));
+
+      return updatedTimes;
+    });
+  };
+
   const handleImagePicker = () => {
-    launchImageLibrary({mediaType: 'photo'}, response => {
+    launchImageLibrary({ mediaType: 'photo' }, (response) => {
       if (response.didCancel) {
         console.log('User cancelled image picker');
       } else if (response.errorMessage) {
         console.log('ImagePicker Error: ', response.errorMessage);
       } else {
-        setImageUri(response.assets[0].uri);
+        setFormData({
+          ...formData,
+          registration_proof: response.assets[0].uri,
+        });
       }
     });
   };
-  console.log(imageUri, 'kkkkkkkkkkkkkkk');
+
+  const handleInputChange = (name, value) => {
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.post('sowlab.com/assignment/user/register', formData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('Response: ', response.data);
+      // Handle successful response
+    } catch (error) {
+      console.error('Error submitting form: ', error);
+      // Handle error response
+    }
+  };
+
   return (
-    <View className="flex flex-1 bg-white">
+    <ScrollView className="flex flex-1 bg-white">
       <ScrollView
         horizontal={true}
         pagingEnabled
@@ -75,7 +170,7 @@ export default function SignUp() {
         ref={scrollViewRef}>
         <View className="flex flex-row">
           {/* first page */}
-          <View style={{width}} className="p-4">
+          <View style={{ width }} className="p-4">
             <Text className="text-gray-600">Farmer Eats</Text>
             <View>
               <View className="mt-16">
@@ -97,13 +192,23 @@ export default function SignUp() {
                   <View className="flex flex-row items-center">
                     <Icon name="user" size={18} color="black" />
                   </View>
-                  <TextInput placeholder="Full name" className="w-full" />
+                  <TextInput
+                    placeholder="Full name"
+                    className="w-full"
+                    value={formData.full_name}
+                    onChangeText={(text) => handleInputChange('full_name', text)}
+                  />
                 </View>
                 <View className="flex flex-row gap-x-2 bg-red-100 rounded-xl px-3 my-2">
                   <View className="flex flex-row items-center">
                     <Icon name="at" size={18} color="black" />
                   </View>
-                  <TextInput placeholder="Email address" className="w-full" />
+                  <TextInput
+                    placeholder="Email address"
+                    className="w-full"
+                    value={formData.email}
+                    onChangeText={(text) => handleInputChange('email', text)}
+                  />
                 </View>
                 <View className="flex flex-row bg-red-100 rounded-xl px-3 my-2 gap-x-2">
                   <View className="flex flex-row items-center">
@@ -113,6 +218,8 @@ export default function SignUp() {
                     placeholder="Phone number"
                     className="w-full"
                     keyboardType="numeric"
+                    value={formData.phone}
+                    onChangeText={(text) => handleInputChange('phone', text)}
                   />
                 </View>
                 <View className="flex flex-row gap-x-2 overflow-hidden bg-red-100 rounded-xl px-3 my-2 justify-between">
@@ -121,6 +228,8 @@ export default function SignUp() {
                     <TextInput
                       placeholder="Password"
                       className=""
+                      value={formData.password}
+                      onChangeText={(text) => handleInputChange('password', text)}
                       secureTextEntry
                     />
                   </View>
@@ -131,6 +240,10 @@ export default function SignUp() {
                     <TextInput
                       placeholder="Re-enter Password"
                       className=""
+                      value={formData.confirmPassword}
+                      onChangeText={(text) =>
+                        handleInputChange('confirmPassword', text)
+                      }
                       secureTextEntry
                     />
                   </View>
@@ -155,133 +268,128 @@ export default function SignUp() {
             </View>
           </View>
           {/* second page */}
-          <View style={{width}} className="p-4">
+          <View style={{ width }} className="p-4">
             <Text className="text-gray-600">Farmer Eats</Text>
             <View>
               <View className="mt-16">
-                <Text className="text-4xl text-black">Farm Info</Text>
-              </View>
-              <View className="mt-12">
-                <View className="flex flex-row gap-x-2 bg-gray-200  rounded-xl px-3 my-2">
-                  <View className="flex flex-row items-center">
-                    <Icon name="user" size={18} color="black" />
-                  </View>
-                  <TextInput placeholder="Bussiness Name" className="w-full" />
-                </View>
-                <View className="flex flex-row gap-x-2 bg-gray-200 rounded-xl px-3 my-2">
-                  <View className="flex flex-row items-center">
-                    <Icon name="at" size={18} color="black" />
-                  </View>
-                  <TextInput placeholder="Informal Name" className="w-full" />
-                </View>
-                <View className="flex flex-row gap-x-2 bg-gray-200 rounded-xl px-3 my-2">
-                  <View className="flex flex-row items-center">
-                    <Icon name="at" size={18} color="black" />
-                  </View>
-                  <TextInput placeholder="Streen address " className="w-full" />
-                </View>
-                <View className="flex flex-row gap-x-2 bg-gray-200 rounded-xl px-3 my-2">
-                  <View className="flex flex-row items-center">
-                    <Icon name="at" size={18} color="black" />
-                  </View>
-                  <TextInput placeholder="City " className="w-full" />
-                </View>
-
-                <View className="flex flex-row   rounded-xl px-3 my-2 justify-between">
-                  <View className="flex flex-row bg-gray-200 px-6 rounded-lg items-center">
-                    <SelectDropdown
-                      dropdownStyle={{
-                        borderWidth: 1,
-                        borderColor: 'gray',
-                        borderRadius: 8,
-                        backgroundColor: 'gray',
-                        paddingVertical: 10,
-                        paddingHorizontal: 12,
-                        width: 100,
-                      }}
-                      data={[{state: 'Kolkata'}, {state: 'Panjab'}]}
-                      onSelect={(selectedItem, index) => {
-                        console.log(selectedItem, index);
-                      }}
-                      renderButton={(selectedItem, isOpened) => (
-                        <View className=" w-full">
-                          <Text className="text-black w-full">
-                            {selectedItem ? selectedItem.state : 'State'}
-                          </Text>
-                        </View>
-                      )}
-                      renderItem={(item, index, isSelected) => (
-                        <View className="">
-                          <Text className="text-black w-full">
-                            {item.state}
-                          </Text>
-                        </View>
-                      )}
-                      showsVerticalScrollIndicator={true}
+                <Text className="text-4xl text-black">Business Information</Text>
+                <View className="mt-12">
+                  <View className="flex flex-row gap-x-2 bg-red-100 rounded-xl px-3 my-2">
+                    <View className="flex flex-row items-center">
+                      <Icon name="industry" size={18} color="black" />
+                    </View>
+                    <TextInput
+                      placeholder="Business Name"
+                      className="w-full"
+                      value={formData.business_name}
+                      onChangeText={(text) =>
+                        handleInputChange('business_name', text)
+                      }
                     />
                   </View>
-                  <TextInput
-                    placeholder=" enter Zipcode "
-                    className="bg-gray-200 rounded-lg "
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View className="my-5 flex flex-row justify-between">
-                  <TouchableOpacity
-                    onPress={handleBack}
-                    className="flex flex-row items-center">
-                    <Icon name="long-arrow-left" size={18} color="black" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleNext}
-                    className="bg-orange-700 py-4 px-16 rounded-full">
-                    <Text className="text-center text-white text-xl font-bold">
-                      Continue
-                    </Text>
-                  </TouchableOpacity>
+                  <View className="flex flex-row gap-x-2 bg-red-100 rounded-xl px-3 my-2">
+                    <View className="flex flex-row items-center">
+                      <Icon name="id-card" size={18} color="black" />
+                    </View>
+                    <TextInput
+                      placeholder="Informal Name"
+                      className="w-full"
+                      value={formData.informal_name}
+                      onChangeText={(text) =>
+                        handleInputChange('informal_name', text)
+                      }
+                    />
+                  </View>
+                  <View className="flex flex-row bg-red-100 rounded-xl px-3 my-2 gap-x-2">
+                    <View className="flex flex-row items-center">
+                      <Icon name="map-marker" size={18} color="black" />
+                    </View>
+                    <TextInput
+                      placeholder="Address"
+                      className="w-full"
+                      value={formData.address}
+                      onChangeText={(text) => handleInputChange('address', text)}
+                    />
+                  </View>
+                  <View className="flex flex-row bg-red-100 rounded-xl px-3 my-2 gap-x-2">
+                    <View className="flex flex-row items-center">
+                      <Icon name="building" size={18} color="black" />
+                    </View>
+                    <TextInput
+                      placeholder="City"
+                      className="w-full"
+                      value={formData.city}
+                      onChangeText={(text) => handleInputChange('city', text)}
+                    />
+                  </View>
+                  <View className="flex flex-row bg-red-100 rounded-xl px-3 my-2 gap-x-2">
+                    <View className="flex flex-row items-center">
+                      <Icon name="map" size={18} color="black" />
+                    </View>
+                    <TextInput
+                      placeholder="State"
+                      className="w-full"
+                      value={formData.state}
+                      onChangeText={(text) => handleInputChange('state', text)}
+                    />
+                  </View>
+                  <View className="flex flex-row bg-red-100 rounded-xl px-3 my-2 gap-x-2">
+                    <View className="flex flex-row items-center">
+                      <Icon name="envelope" size={18} color="black" />
+                    </View>
+                    <TextInput
+                      placeholder="Zip Code"
+                      className="w-full"
+                      keyboardType="numeric"
+                      value={formData.zip_code}
+                      onChangeText={(text) => handleInputChange('zip_code', text)}
+                    />
+                  </View>
+                  <View className="my-5 flex flex-row justify-between">
+                    <TouchableOpacity
+                      onPress={handleBack}
+                      className="flex flex-row items-center">
+                      <Text className="text-center black underline text-xl">
+                        Back
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleNext}
+                      className="bg-orange-700 py-4 px-16 rounded-full">
+                      <Text className="text-center text-white text-xl font-bold">
+                        Continue
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
           </View>
           {/* third page */}
-          <View style={{width}} className="p-4">
+          <View style={{ width }} className="p-4">
             <Text className="text-gray-600">Farmer Eats</Text>
             <View>
               <View className="mt-16">
-                <Text className="text-4xl text-black">Verification</Text>
-                <Text>
-                  Attach proof of Department of Agriculture registrations i.e.
-                  Florida Fresh, USDA Approved, USDA Organic
-                </Text>
-              </View>
-              <View className="mt-12">
-                <View className="flex flex-row justify-between">
-                  <View className="">
-                    <Text className="text-orange-700">
-                      Attach proof of of Registration
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={handleImagePicker}
-                    className="flex bg-orange-500 flex-row items-center justify-center p-1 rounded-lg">
-                    <Image source={cameraicon} className="h-5 w-5" />
-                  </TouchableOpacity>
-                </View>
-                <View className="flex flex-row justify-center my-4">
-                  {imageUri && (
-                    <Image
-                      source={{uri: imageUri}}
-                      style={{width: width, height: 400}}
-                    />
-                  )}
-                </View>
-
-                <View className="my-5 flex flex-row justify-between bottom-0 ">
+                <Text className="text-4xl text-black">Registration Proof</Text>
+                <TouchableOpacity
+                  onPress={handleImagePicker}
+                  className="border-2 border-dashed border-gray-300 p-4 rounded-xl my-8 flex items-center justify-center">
+                  <Image source={cameraicon} className="w-16 h-16 mb-4" />
+                  <Text className="text-gray-500">Upload Registration Proof</Text>
+                </TouchableOpacity>
+                {formData.registration_proof && (
+                  <Image
+                    source={{ uri: formData.registration_proof }}
+                    className="w-full h-64 rounded-xl"
+                  />
+                )}
+                <View className="my-5 flex flex-row justify-between">
                   <TouchableOpacity
                     onPress={handleBack}
                     className="flex flex-row items-center">
-                    <Icon name="long-arrow-left" size={18} color="black" />
+                    <Text className="text-center black underline text-xl">
+                      Back
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleNext}
@@ -295,88 +403,60 @@ export default function SignUp() {
             </View>
           </View>
           {/* fourth page */}
-          <View style={{width}} className="p-4">
+          <View style={{ width }} className="p-4">
             <Text className="text-gray-600">Farmer Eats</Text>
             <View>
               <View className="mt-16">
                 <Text className="text-4xl text-black">Business Hours</Text>
-                <Text className="text-justify">
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                  Doloremque, culpa!
-                </Text>
-              </View>
-
-              <View className="mt-16">
-                {/* days */}
-                <View className="flex flex-row  gap-x-4 w-full my-3 ">
-                  <TouchableOpacity className="bg-gray-200 px-2 text-black rounded-lg">
-                    <Text>M</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="bg-gray-200 px-2 text-black rounded-lg">
-                    <Text>T</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="bg-orange-500 px-2 text-black rounded-lg">
-                    <Text>W</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="bg-gray-200 px-2 text-black rounded-lg">
-                    <Text>T</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="bg-gray-200 px-2 text-black rounded-lg">
-                    <Text>F</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="bg-gray-200 px-2 text-black rounded-lg">
-                    <Text>S</Text>
-                  </TouchableOpacity>
+                <View className="my-8">
+                  <View className="flex flex-row justify-around">
+                    {days.map((day) => (
+                      <TouchableOpacity
+                        key={day}
+                        className={`px-2 py-1 rounded-lg ${
+                          selectedDay === dayMapping[day] ? 'bg-orange-700' : 'bg-gray-200'
+                        }`}
+                        onPress={() => handleDaySelect(day)}>
+                        <Text
+                          className={`${
+                            selectedDay === dayMapping[day] ? 'text-white' : 'text-black'
+                          }`}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View className="mt-4">
+                    {scheduling.map((time) => (
+                      <TouchableOpacity
+                        key={time}
+                        className={`px-4 py-2 my-1 rounded-lg ${
+                          selectedTimes.includes(time) ? 'bg-orange-700' : 'bg-gray-200'
+                        }`}
+                        onPress={() => handleTimeSelect(time)}>
+                        <Text
+                          className={`${
+                            selectedTimes.includes(time) ? 'text-white' : 'text-black'
+                          }`}>
+                          {time}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-                {/* scheduling */}
-                <View className="flex flex-row justify-between flex-wrap">
-                  {scheduling.map((item, index) => (
-                    <TouchableOpacity className=" rounded-lg bg-orange-700 py-2 px-2 m-2">
-                      <Text>{item}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-              <View className="mt-12">
                 <View className="my-5 flex flex-row justify-between">
                   <TouchableOpacity
                     onPress={handleBack}
                     className="flex flex-row items-center">
-                    <Icon name="long-arrow-left" size={18} color="black" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleNext}
-                    className="bg-orange-700 py-4 px-16 rounded-full">
-                    <Text className="text-center text-white text-xl font-bold">
-                      Continue
+                    <Text className="text-center black underline text-xl">
+                      Back
                     </Text>
                   </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
-          {/* fifth page */}
-          <View style={{width}} className="p-4">
-            <Text className="text-gray-600">Farmer Eats</Text>
-            <View>
-              <View className="mt-12">
-                <Text className="text-center font-bold text-black text-2xl">
-                  You're All done
-                </Text>
-                <Text className="text-justify">
-                  Lorem ipsum dolor sit, amet consectetur adipisicing elit. Quia
-                  beatae saepe repudiandae fuga ea ipsum perferendis obcaecati
-                  iusto, voluptatum natus.
-                </Text>
-                <View className="my-5 flex flex-row justify-center">
-                  {/* <TouchableOpacity onPress={handleBack} className="flex flex-row items-center">
-                    <Icon name="long-arrow-left" size={18} color="black" />
-                  </TouchableOpacity> */}
                   <TouchableOpacity
-                    onPress={() => navigation.navigate('Login')}
-                    className="bg-orange-700 py-4 px-16 rounded-full w-full">
+                    onPress={handleSubmit}
+                    className="bg-orange-700 py-4 px-16 rounded-full">
                     <Text className="text-center text-white text-xl font-bold">
-                      Got it!
+                      Submit
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -385,6 +465,6 @@ export default function SignUp() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </ScrollView>
   );
 }
